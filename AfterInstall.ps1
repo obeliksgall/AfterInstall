@@ -423,6 +423,88 @@ function Restore-FoobarPlaybackStats {
     }
 }
 
+function Install-MSIAfterburner {
+    $ZipUrl = "https://download.msi.com/uti_exe/vga/MSIAfterburnerSetup.zip"
+    $TempZip = Join-Path $env:TEMP "MSIAfterburner.zip"
+    $ExtractPath = Join-Path $env:TEMP "MSIAfterburnerExtract"
+
+    try {
+        Write-Log -Message "Downloading MSI Afterburner installer..." -Level "INFO"
+        Invoke-WebRequest -Uri $ZipUrl -OutFile $TempZip -UseBasicParsing -TimeoutSec 60
+
+        if (Test-Path $ExtractPath) { Remove-Item $ExtractPath -Recurse -Force }
+        New-Item -Path $ExtractPath -ItemType Directory | Out-Null
+
+        Expand-Archive -Path $TempZip -DestinationPath $ExtractPath -Force
+
+        $SetupExe = Get-ChildItem -Path $ExtractPath -Filter "MSIAfterburnerSetup.exe" -Recurse | Select-Object -First 1
+        if (-not $SetupExe) {
+            Write-Log -Message "Installer not found in archive." -Level "ERROR"
+            exit 1
+        }
+
+        Write-Log -Message "Running MSI Afterburner installer..." -Level "INFO"
+        Start-Process -FilePath $SetupExe.FullName -ArgumentList "/S" -Wait
+        Write-Log -Message "MSI Afterburner installation completed." -Level "INFO"
+    } catch {
+        Write-Log -Message "Failed to install MSI Afterburner: $_" -Level "ERROR"
+        exit 1
+    }
+}
+function Install-AfterburnerOverlay {
+    $OverlayUrl = "https://github.com/obeliksgall/AfterInstall/raw/refs/heads/main/MSIAfterburnerOverlay/MyOverlay.ovl"
+    $OverlayName = "MyOverlay.ovl"
+    $TargetDir = "$env:ProgramFiles(x86)\RivaTuner Statistics Server\Profiles"
+    $TargetPath = Join-Path $TargetDir $OverlayName
+
+    if (-not (Test-Path $TargetDir)) {
+        Write-Log -Message "Overlay target folder not found: $TargetDir" -Level "ERROR"
+        exit 1
+    }
+
+    try {
+        Write-Log -Message "Downloading overlay from GitHub..." -Level "INFO"
+        Invoke-WebRequest -Uri $OverlayUrl -OutFile $TargetPath -UseBasicParsing -TimeoutSec 30
+        Write-Log -Message "Overlay installed to: $TargetPath" -Level "INFO"
+    } catch {
+        Write-Log -Message "Failed to install overlay: $_" -Level "ERROR"
+        exit 1
+    }
+}
+
+function Install-SyncTrayzor {
+    $InstallerUrl = "https://github.com/canton7/SyncTrayzor/releases/download/v1.1.29/SyncTrayzorSetup-x64.exe"
+    $InstallerPath = Join-Path $env:TEMP "SyncTrayzorSetup-x64.exe"
+
+    try {
+        Write-Log -Message "Downloading SyncTrayzor installer..." -Level "INFO"
+        Invoke-WebRequest -Uri $InstallerUrl -OutFile $InstallerPath -UseBasicParsing -TimeoutSec 60
+
+        Write-Log -Message "Running SyncTrayzor installer silently..." -Level "INFO"
+        Start-Process -FilePath $InstallerPath -ArgumentList "/SILENT" -Wait
+        Write-Log -Message "SyncTrayzor installation completed." -Level "INFO"
+    } catch {
+        Write-Log -Message "Failed to install SyncTrayzor: $_" -Level "ERROR"
+        exit 1
+    }
+}
+function Install-StreamDeck {
+    $InstallerUrl = "https://edge.elgato.com/egc/windows/sd/Stream_Deck_7.0.1.22055.msi"
+    $InstallerPath = Join-Path $env:TEMP "StreamDeckSetup.exe"
+
+    try {
+        Write-Log -Message "Downloading Elgato Stream Deck installer..." -Level "INFO"
+        Invoke-WebRequest -Uri $InstallerUrl -OutFile $InstallerPath -UseBasicParsing -TimeoutSec 60
+
+        Write-Log -Message "Running Stream Deck installer silently..." -Level "INFO"
+        Start-Process -FilePath $InstallerPath -ArgumentList "/S" -Wait
+        Write-Log -Message "Stream Deck installation completed." -Level "INFO"
+    } catch {
+        Write-Log -Message "Failed to install Stream Deck: $_" -Level "ERROR"
+        exit 1
+    }
+}
+
 
 
 # Abort script if no internet connection
@@ -464,6 +546,13 @@ if (-not $SkipFoobarThemeFromGitHub) {
 if (-not $SkipFoobarPlaybackStats) {
     Restore-FoobarPlaybackStats
 }
+
+Install-MSIAfterburner
+Install-AfterburnerOverlay
+
+Install-SyncTrayzor
+Install-StreamDeck
+
 
 # Main script logic
 #for ($i = 1; $i -le 5; $i++) {
