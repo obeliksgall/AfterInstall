@@ -1,25 +1,28 @@
-### 📄 README: AfterInstall.ps1
+## 📄 README: AfterInstall.ps1
 
 ### Overview
 
-`AfterInstall.ps1` is a modular PowerShell automation script designed to streamline post-installation setup on Windows systems. It installs essential applications, configures system settings, and restores user preferences — all with robust logging, error handling, and optional silent execution.
+`AfterInstall.ps1` is a modular PowerShell automation script designed for post-install system setup. It installs essential applications, configures system power settings, restores Foobar2000 plugins and themes, and imports playback statistics — all with robust logging, elevation handling, and optional silent execution.
 
 ---
 
 ### 🔧 Features
 
-- ✅ Internet connectivity check  
-- ✅ Ninite-based application installation (silent)  
-- ✅ DirectX runtime installation  
-- ✅ AdGuard installation (manual fallback supported)  
-- ✅ Foobar2000 (32-bit) installation with plugin support  
-- ✅ Automatic plugin deployment (DLL and .fb2k-component)  
-- ✅ Foobar2000 theme restoration from GitHub  
-- ✅ Playback statistics import (`PlaybackStatistics.xml`)  
-- ✅ Power configuration: disables sleep and hibernation  
-- ✅ Elevation check and auto-relaunch with admin rights  
-- ✅ Configurable logging with rotation and retention  
 - ✅ Interactive startup prompt (optional)
+- ✅ Elevation check and auto-relaunch with admin rights
+- ✅ Internet connectivity check
+- ✅ Ninite installer execution (silent by default)
+- ✅ DirectX runtime installation
+- ✅ AdGuard installation via direct download
+- ✅ Foobar2000 32-bit installation
+- ✅ Plugin installation for Foobar2000:
+  - Supports `.fb2k-component` and `.zip` with `.dll`
+  - Downloads from official foobar2000.org links
+- ✅ Theme restoration from GitHub (`.fth`)
+- ✅ Playback statistics import (`foobar2000PlaybackStatistics.xml`)
+- ✅ Power configuration: disables sleep and hibernation
+- ✅ Structured logging with timestamped files
+- ✅ Configurable log level and retention
 
 ---
 
@@ -29,38 +32,40 @@
 powershell.exe -ExecutionPolicy Bypass -File "AfterInstall.ps1"
 ```
 
-Optional parameters:
+Optional switches:
 
-| Parameter             | Description                                      |
+| Switch               | Description                                      |
 |----------------------|--------------------------------------------------|
 | `-SilentStart`        | Skips the interactive startup prompt             |
+| `-SkipElevation`      | Skips elevation check and relaunch               |
 | `-SkipNinite`         | Skips Ninite installer execution                 |
 | `-SkipDirectX`        | Skips DirectX runtime installation               |
 | `-SkipPowerConfig`    | Skips disabling sleep and hibernation            |
-| `-SkipElevation`      | Skips elevation check and relaunch               |
 
 Example:
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File "AfterInstall.ps1" -SilentStart -SkipDirectX
+powershell.exe -ExecutionPolicy Bypass -File "AfterInstall.ps1" -SilentStart -SkipDirectX -SkipPowerConfig
 ```
 
 ---
 
 ### 📁 File Structure
 
-Place the following files in the same directory as the script:
+Place the following file in the same directory as the script:
 
 - `foobar2000PlaybackStatistics.xml` — playback history backup
-- `adguardInstaller.exe` (optional fallback if download fails)
+
+No fallback installer for AdGuard is required — the script downloads it directly from the official CDN.
 
 ---
 
 ### 🎵 Foobar2000 Integration
 
 - Installs Foobar2000 32-bit silently
-- Downloads plugins from official sources:
-  - `foo_playcount`, `foo_wave_seekbar`, `foo_beefweb`, `foo_openlyrics`, `foo_dsp_xgeq`
+- Downloads and installs plugins:
+  - `foo_beefweb`, `foo_openlyrics`, `foo_playcount`, `foo_wave_seekbar`, `foo_dsp_xgeq`
+- Handles `.fb2k-component` and `.zip` formats
 - Restores theme from GitHub:
   - [foobar2000theme_last.fth](https://github.com/obeliksgall/AfterInstall/raw/refs/heads/main/foobar2000/foobar2000theme_last.fth)
 - Imports playback statistics from local XML file
