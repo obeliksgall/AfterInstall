@@ -11,7 +11,9 @@ param (
     [switch]$SkipElevation,
     [switch]$SkipAdGuard,
     [switch]$SkipFoobar2000,
-    [switch]$SkipFoobar2000Plugin
+    [switch]$SkipFoobar2000Plugin,
+    [switch]$SkipFoobarThemeFromGitHub,
+    [switch]$SkipFoobarPlaybackStats
 )
 
 
@@ -452,15 +454,19 @@ if (-not $SkipFoobar2000Plugin) {
     Install-FoobarPlugins
 }
 
-Install-FoobarThemeFromGitHub
+if (-not $SkipFoobarThemeFromGitHub) {
+    Install-FoobarThemeFromGitHub
+}
 
-Restore-FoobarPlaybackStats
+if (-not $SkipFoobarPlaybackStats) {
+    Restore-FoobarPlaybackStats
+}
 
 # Main script logic
-for ($i = 1; $i -le 5; $i++) {
-    Write-Log -Message "This is INFO log number $i" -Level "INFO"
-    Write-Log -Message "This is WARN log number $i" -Level "WARN"
-    Write-Log -Message "This is ERROR log number $i" -Level "ERROR"
-    Write-Log -Message "This is DEBUG log number $i" -Level "DEBUG"
-    Start-Sleep -Seconds 5
-}
+#for ($i = 1; $i -le 5; $i++) {
+#    Write-Log -Message "This is INFO log number $i" -Level "INFO"
+#    Write-Log -Message "This is WARN log number $i" -Level "WARN"
+#    Write-Log -Message "This is ERROR log number $i" -Level "ERROR"
+#    Write-Log -Message "This is DEBUG log number $i" -Level "DEBUG"
+#    Start-Sleep -Seconds 5
+#}
