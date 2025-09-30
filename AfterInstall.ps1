@@ -293,7 +293,9 @@ function Install-AdGuard {
     }
 
     try {
-        Write-Log -Message "Running AdGuard installer silently..." -Level "INFO"
+        #Write-Log -Message "Running AdGuard installer silently..." -Level "INFO"
+        #Start-Process -FilePath $InstallerPath -ArgumentList "/silent" -Wait
+        Write-Log -Message "Running AdGuard installer..." -Level "INFO"
         Start-Process -FilePath $InstallerPath -ArgumentList "/silent" -Wait
         Write-Log -Message "AdGuard installation completed." -Level "INFO"
     } catch {
@@ -303,7 +305,8 @@ function Install-AdGuard {
 }
 
 function Install-Foobar2000 {
-    $FoobarUrl = "https://www.foobar2000.org/getfile/foobar2000_v2.25.1.exe"
+    #$FoobarUrl = "https://www.foobar2000.org/getfile/foobar2000_v2.25.1.exe"
+    $FoobarUrl = "https://www.foobar2000.org/files/foobar2000_v2.25.1.exe"
     $InstallerPath = Join-Path $env:TEMP "foobar2000_installer.exe"
 
     try {
@@ -334,7 +337,7 @@ function Install-FoobarPlugins {
         "https://www.foobar2000.org/getcomponent/8febb9df1bbeabf041f1965e6fbb6e96/foo_dsp_xgeq.zip"
     )
 
-    $FoobarComponentDir = "$env:ProgramFiles(x86)\foobar2000\components"
+    $FoobarComponentDir = "$env:ProgramFiles (x86)\foobar2000\components"
     if (-not (Test-Path $FoobarComponentDir)) {
         Write-Log -Message "Foobar2000 not found at expected path: $FoobarComponentDir" -Level "ERROR"
         exit 1
