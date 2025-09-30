@@ -2,6 +2,8 @@
 
 ### Overview
 
+!!The script is under development and may not work correctly on all Windows systems.!!
+
 `AfterInstall.ps1` is a modular PowerShell automation script designed for post-install system setup. It installs essential applications, configures system power settings, restores Foobar2000 plugins and themes, and imports playback statistics — all with robust logging, elevation handling, and optional silent execution.
 
 ---
