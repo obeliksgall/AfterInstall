@@ -1,0 +1,332 @@
+[Master]
+Implementation=2
+FontFace=Unispace
+FontHeight=-9
+FontWeight=400
+ZoomRatio=1
+[Settings]
+Name=
+RefreshPeriod=1000
+EmbeddedImage=
+PingAddr=
+[General]
+Sources=17
+Tables=0
+Layers=18
+[Source0]
+Name=GPU temperature
+Units=°C
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000000
+Gpu=00000000
+SrcName=
+[Source1]
+Name=GPU usage
+Units=%
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000030
+Gpu=00000000
+SrcName=
+[Source2]
+Name=Memory usage
+Units=GB
+Format=%0.1f
+Formula=x/1024
+Provider=MSI Afterburner
+SrcId=00000031
+Gpu=00000000
+SrcName=
+[Source3]
+Name=CPU temperature
+Units=°C
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000080
+Gpu=FFFFFFFF
+SrcName=
+[Source4]
+Name=CPU usage
+Units=%
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000090
+Gpu=FFFFFFFF
+SrcName=
+[Source5]
+Name=CPU power
+Units=W
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000100
+Gpu=FFFFFFFF
+SrcName=
+[Source6]
+Name=RAM usage
+Units=GB
+Format=%0.1f
+Formula=x/1024
+Provider=MSI Afterburner
+SrcId=00000091
+Gpu=00000000
+SrcName=
+[Source7]
+Name=Framerate
+Units=FPS
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000050
+Gpu=FFFFFFFF
+SrcName=
+[Source8]
+Name=Frametime
+Units=ms
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000051
+Gpu=FFFFFFFF
+SrcName=
+[Source9]
+Name=Power
+Units=W
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000061
+Gpu=00000000
+SrcName=
+[Source10]
+Name=Fan tachometer
+Units=RPM
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000011
+Gpu=00000000
+SrcName=
+[Source11]
+Name=Fan tachometer 2
+Units=RPM
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000013
+Gpu=00000000
+SrcName=
+[Source12]
+Name=Fan speed
+Units=%
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000010
+Gpu=00000000
+SrcName=
+[Source13]
+Name=Core clock
+Units=MHz
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000020
+Gpu=00000000
+SrcName=
+[Source14]
+Name=Memory clock
+Units=MHz
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000022
+Gpu=00000000
+SrcName=
+[Source15]
+Name=Fan speed
+Units=%
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000010
+Gpu=00000000
+SrcName=
+[Source16]
+Name=Power
+Units=W
+Format=
+Formula=
+Provider=MSI Afterburner
+SrcId=00000061
+Gpu=00000000
+SrcName=
+[Layer0]
+Name=
+Text=
+PositionX=0
+PositionY=0
+ExtentX=-24
+ExtentY=-12
+ExtentOrigin=0
+Alignment=-1
+BgndColor=42808080
+[Layer1]
+Name=
+Text=GPU
+PositionX=-1
+PositionY=-1
+ExtentX=-5
+ExtentY=-1
+ExtentOrigin=0
+TextColor=8000
+[Layer2]
+Name=
+Text=CPU
+PositionX=-1
+PositionY=-3
+ExtentX=-5
+ExtentY=-1
+ExtentOrigin=0
+TextColor=80FF
+[Layer3]
+Name=
+Text=VRAM
+PositionX=-1
+PositionY=-5
+ExtentX=-5
+ExtentY=-1
+ExtentOrigin=0
+TextColor=8000FF
+[Layer4]
+Name=
+Text=RAM
+PositionX=-1
+PositionY=-6
+ExtentX=-5
+ExtentY=-1
+ExtentOrigin=0
+TextColor=8000FF
+[Layer5]
+Name=
+Text=DXVK
+PositionX=-1
+PositionY=-7
+ExtentX=-5
+ExtentY=-1
+ExtentOrigin=0
+TextColor=E34444
+[Layer6]
+Name=
+Text=%GPU usage% %
+PositionX=-7
+PositionY=-1
+ExtentX=-8
+ExtentY=-1
+ExtentOrigin=5
+TextColor=FFFFFF
+[Layer7]
+Name=
+Text=%CPU usage% %
+PositionX=-7
+PositionY=-3
+ExtentX=-8
+ExtentY=-1
+ExtentOrigin=5
+TextColor=FFFFFF
+[Layer8]
+Name=
+Text=%Memory usage% GB
+PositionX=-7
+PositionY=-5
+ExtentX=-8
+ExtentY=-1
+ExtentOrigin=5
+TextColor=FFFFFF
+[Layer9]
+Name=
+Text=%RAM usage% GB
+PositionX=-7
+PositionY=-6
+ExtentX=-8
+ExtentY=-1
+ExtentOrigin=5
+TextColor=FFFFFF
+[Layer10]
+Name=
+Text=%Framerate% FPS
+PositionX=-7
+PositionY=-7
+ExtentX=-8
+ExtentY=-1
+ExtentOrigin=5
+TextColor=FFFFFF
+[Layer11]
+Name=
+Text=%GPU temperature% °C
+PositionX=-17
+PositionY=-1
+ExtentX=-6
+ExtentY=-1
+ExtentOrigin=5
+TextColor=FFFFFF
+[Layer12]
+Name=
+Text=%CPU temperature% °C
+PositionX=-17
+PositionY=-3
+ExtentX=-6
+ExtentY=-1
+ExtentOrigin=5
+TextColor=FFFFFF
+[Layer13]
+Name=
+Text=%CPU power% W
+PositionX=-7
+PositionY=-4
+ExtentX=-8
+ExtentY=-1
+ExtentOrigin=5
+TextColor=FFFFFF
+[Layer14]
+Name=
+Text=<G=Frametime,0,0,1,0,100,0>
+PositionX=-1
+PositionY=-8
+ExtentX=-22
+ExtentY=-3
+ExtentOrigin=0
+TextColor=FF00
+[Layer15]
+Name=
+Text=%Frametime% ms
+PositionX=-15
+PositionY=-7
+ExtentX=-8
+ExtentY=-1
+ExtentOrigin=5
+Alignment=1
+TextColor=FFFFFF
+[Layer16]
+Name=
+Text=%Power% W
+PositionX=-7
+PositionY=-2
+ExtentX=-8
+ExtentY=-1
+ExtentOrigin=5
+TextColor=FFFFFF
+[Layer17]
+Name=
+Text=%Fan speed%  %
+PositionX=-17
+PositionY=-2
+ExtentX=-6
+ExtentY=-1
+ExtentOrigin=5
+TextColor=FFFFFF
