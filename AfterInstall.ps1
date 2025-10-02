@@ -248,9 +248,27 @@ function Install-AdGuard {
     }
 }
 
+function Stop-FoobarIfRunning {
+    try {
+        $foobarProcess = Get-Process -Name "foobar2000" -ErrorAction SilentlyContinue
+        if ($foobarProcess) {
+            Write-Log -Message "Foobar2000 is running. Attempting to close..." -Level "WARN"
+            Stop-Process -Name "foobar2000" -Force
+            Write-Log -Message "Foobar2000 process terminated." -Level "INFO"
+        } else {
+            Write-Log -Message "Foobar2000 is not running." -Level "DEBUG"
+        }
+    } catch {
+        Write-Log -Message "Failed to stop Foobar2000: $_" -Level "ERROR"
+    }
+}
+
+
 function Install-Foobar2000WithPlugins {
     $FoobarUrl = "https://www.foobar2000.org/files/foobar2000_v2.25.1.exe"
     $InstallerPath = Join-Path $InstallDir "foobar2000_installer.exe"
+
+    Stop-FoobarIfRunning
 
     try {
         Write-Log -Message "Downloading Foobar2000 installer..." -Level "INFO"
@@ -320,47 +338,85 @@ function Install-Foobar2000WithPlugins {
                 Write-Log -Message "Failed to copy component $fileName : $_" -Level "ERROR"
             }
         }
+
+
+# Dodatkowe rozpakowanie do user-components dla wybranych pluginów
+$UserComponentMap = @{
+    "foo_openlyrics-v1.6.fb2k-component"     = "foo_openlyrics"
+    "foo_wave_seekbar-0.2.45.fb2k-component" = "foo_wave_seekbar"
+}
+
+if ($UserComponentMap.ContainsKey($fileName)) {
+    $pluginFolderName = $UserComponentMap[$fileName]
+    $pluginTargetDir  = Join-Path $env:APPDATA "foobar2000-v2\user-components\$pluginFolderName"
+
+    if (Test-Path $pluginTargetDir) { Remove-Item $pluginTargetDir -Recurse -Force }
+    New-Item -Path $pluginTargetDir -ItemType Directory | Out-Null
+
+    $sevenZipPath = "${env:ProgramFiles}\7-Zip\7z.exe"
+    if (-not (Test-Path $sevenZipPath)) {
+        $sevenZipPath = "${env:ProgramFiles(x86)}\7-Zip\7z.exe"
+    }
+
+    if (Test-Path $sevenZipPath) {
+        try {
+            Write-Log -Message "Extracting $fileName to user-components using 7-Zip → $pluginTargetDir" -Level "INFO"
+            Start-Process -FilePath $sevenZipPath -ArgumentList "x `"$tempPath`" -o`"$pluginTargetDir`" -y" -Wait -NoNewWindow
+            Write-Log -Message "Plugin $pluginFolderName extracted to user-components via 7-Zip." -Level "INFO"
+        } catch {
+            Write-Log -Message "7-Zip extraction failed for $pluginFolderName : $_" -Level "ERROR"
+        }
+    } else {
+        Write-Log -Message "7-Zip not found. Skipping extraction of $pluginFolderName to user-components." -Level "WARN"
+    }
+}
+
+
+
+
+
+
     }
 
 
 
 
     # Download and install user-components from GitHub
-$UserComponentsZipUrl = "https://github.com/obeliksgall/AfterInstall/archive/refs/heads/main.zip"
-$ZipPath = Join-Path $InstallDir "foobar_user_components.zip"
-$ExtractRoot = Join-Path $InstallDir "foobar_user_components_extract"
-$TargetUserComponents = Join-Path $env:APPDATA "foobar2000-v2\user-components"
-
-try {
-    Write-Log -Message "Downloading user-components archive from GitHub..." -Level "INFO"
-    Invoke-WebRequest -Uri $UserComponentsZipUrl -OutFile $ZipPath -UseBasicParsing -TimeoutSec 60
-    Write-Log -Message "Download completed: $ZipPath" -Level "INFO"
-} catch {
-    Write-Log -Message "Failed to download user-components archive: $_" -Level "ERROR"
-    return
-}
-
-try {
-    if (Test-Path $ExtractRoot) { Remove-Item $ExtractRoot -Recurse -Force }
-    Expand-Archive -Path $ZipPath -DestinationPath $ExtractRoot -Force
-    Write-Log -Message "Archive extracted to: $ExtractRoot" -Level "INFO"
-
-    $SourceUserComponents = Join-Path $ExtractRoot "AfterInstall-main\foobar2000\user-components"
-    if (-not (Test-Path $SourceUserComponents)) {
-        Write-Log -Message "Source user-components directory not found: $SourceUserComponents" -Level "ERROR"
-        return
-    }
-
-    if (-not (Test-Path $TargetUserComponents)) {
-        Write-Log -Message "Creating target user-components directory: $TargetUserComponents" -Level "INFO"
-        New-Item -Path $TargetUserComponents -ItemType Directory | Out-Null
-    }
-
-    Copy-Item -Path "$SourceUserComponents\*" -Destination $TargetUserComponents -Recurse -Force
-    Write-Log -Message "User-components installed to: $TargetUserComponents" -Level "INFO"
-} catch {
-    Write-Log -Message "Failed to extract or copy user-components: $_" -Level "ERROR"
-}
+#$UserComponentsZipUrl = "https://github.com/obeliksgall/AfterInstall/archive/refs/heads/main.zip"
+#$ZipPath = Join-Path $InstallDir "foobar_user_components.zip"
+#$ExtractRoot = Join-Path $InstallDir "foobar_user_components_extract"
+#$TargetUserComponents = Join-Path $env:APPDATA "foobar2000-v2\user-components"
+#
+#try {
+#    Write-Log -Message "Downloading user-components archive from GitHub..." -Level "INFO"
+#    Invoke-WebRequest -Uri $UserComponentsZipUrl -OutFile $ZipPath -UseBasicParsing -TimeoutSec 60
+#    Write-Log -Message "Download completed: $ZipPath" -Level "INFO"
+#} catch {
+#    Write-Log -Message "Failed to download user-components archive: $_" -Level "ERROR"
+#    return
+#}
+#
+#try {
+#    if (Test-Path $ExtractRoot) { Remove-Item $ExtractRoot -Recurse -Force }
+#    Expand-Archive -Path $ZipPath -DestinationPath $ExtractRoot -Force
+#    Write-Log -Message "Archive extracted to: $ExtractRoot" -Level "INFO"
+#
+#    $SourceUserComponents = Join-Path $ExtractRoot "AfterInstall-main\foobar2000\user-components"
+#    if (-not (Test-Path $SourceUserComponents)) {
+#        Write-Log -Message "Source user-components directory not found: $SourceUserComponents" -Level "ERROR"
+#        return
+#    }
+#
+#    if (-not (Test-Path $TargetUserComponents)) {
+#        Write-Log -Message "Creating target user-components directory: $TargetUserComponents" -Level "INFO"
+#        New-Item -Path $TargetUserComponents -ItemType Directory | Out-Null
+#    }
+#
+#    Copy-Item -Path "$SourceUserComponents\*" -Destination $TargetUserComponents -Recurse -Force
+#    Write-Log -Message "User-components installed to: $TargetUserComponents" -Level "INFO"
+#} catch {
+#    Write-Log -Message "Failed to extract or copy user-components: $_" -Level "ERROR"
+#}
 
 
 
