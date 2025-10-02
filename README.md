@@ -2,6 +2,11 @@
 
 **AfterInstall.ps1** is a modular, interactive PowerShell script designed to automate post-installation setup on Windows systems. It provides a user-friendly menu for installing essential software, configuring system settings, and applying customizations — all with robust logging, error handling, and traceability.
 
+Run:
+```
+irm "https://raw.githubusercontent.com/obeliksgall/AfterInstall/refs/heads/main/AfterInstall.ps1" | iex
+```
+
 ---
 
 ## 🚀 Features
