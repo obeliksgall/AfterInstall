@@ -1,159 +1,150 @@
-param (
-    [ValidateSet("INFO", "WARN", "ERROR", "DEBUG")]
-    [string]$LogLevel = "DEBUG",
+#$logPath = "C:\AfterInstall\LOGs\AfterInstall_v02_current.txt"
+#[System.IO.File]::SetLastWriteTime($logPath, [datetime]"2025-09-22 18:00")
+#Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
-    [int]$RetentionDays = 7,
+# ───── Log Setup ─────
+$LogLevel = "DEBUG"
+$LogPriority = @{ INFO = 1; WARN = 2; ERROR = 3; DEBUG = 4 }
+$LogColor    = @{ INFO = "Green"; WARN = "Yellow"; ERROR = "Red"; DEBUG = "Cyan" }
+$ScriptName  = [System.IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Path)
+$RetentionDays = 7
 
-    [switch]$SilentStart,
-    [switch]$SkipNinite,
-    [switch]$SkipDirectX,
-    [switch]$SkipPowerConfig,
-    [switch]$SkipElevation,
-    [switch]$SkipAdGuard,
-    [switch]$SkipFoobar2000,
-    [switch]$SkipFoobar2000Plugin,
-    [switch]$SkipFoobarThemeFromGitHub,
-    [switch]$SkipFoobarPlaybackStats
-)
+# ───── Paths ─────
+$ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$LogDir     = Join-Path -Path $PSScriptRoot -ChildPath "LOGs"
+$InstallDir = Join-Path $ScriptRoot "INSTALLfiles"
+$CurrentLog = Join-Path $LogDir "$ScriptName`_current.txt"
 
-
-# Map log levels to priorities
-$LogPriority = @{
-    INFO  = 1
-    WARN  = 2
-    ERROR = 3
-    DEBUG = 4
+# ───── Create Directories ─────
+foreach ($dir in @($LogDir, $InstallDir)) {
+    if (-not (Test-Path $dir)) {
+        New-Item -Path $dir -ItemType Directory | Out-Null
+    }
 }
 
-# Console colors for log levels
-$LogColor = @{
-    INFO  = "Green"
-    WARN  = "Yellow"
-    ERROR = "Red"
-    DEBUG = "Cyan"
-}
-
-# Get script name without extension
-$ScriptName = [System.IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Path)
-
-# Define log directory
-$LogDir = Join-Path -Path $PSScriptRoot -ChildPath "LOGs"
-if (-not (Test-Path $LogDir)) {
-    New-Item -Path $LogDir -ItemType Directory | Out-Null
-}
-
-# Delete old logs based on retention policy
+# ───── Delete Old Logs ─────
 Get-ChildItem -Path $LogDir -File | Where-Object {
     $_.Name -like "$ScriptName*_*.txt" -and $_.LastWriteTime -lt (Get-Date).AddDays(-$RetentionDays)
 } | Remove-Item -Force
 
-# Rotate daily logs with versioning
+# ───── Rotate Daily Logs ─────
 function Rotate-Log {
-    $CurrentLog = Join-Path $LogDir "$ScriptName`_current.txt"
     if (Test-Path $CurrentLog) {
         $LastWriteDate = (Get-Item $CurrentLog).LastWriteTime.Date
         $Today = (Get-Date).Date
         if ($LastWriteDate -ne $Today) {
             $BaseName = "$ScriptName" + "_" + $LastWriteDate.ToString("yyyy_MM_dd")
             $ArchivedPath = Join-Path $LogDir "$BaseName.txt"
-
-            # Add version suffix if file already exists
             $counter = 1
             while (Test-Path $ArchivedPath) {
                 $ArchivedPath = Join-Path $LogDir "$BaseName" + "_$counter.txt"
                 $counter++
             }
-
             Rename-Item -Path $CurrentLog -NewName (Split-Path $ArchivedPath -Leaf)
         }
     }
 }
 
-# Write log entry to console and file
+# ───── Write Log Entry ─────
 function Write-Log {
     param (
         [string]$Message,
         [ValidateSet("INFO", "WARN", "ERROR", "DEBUG")]
         [string]$Level
     )
-
     if ($LogPriority[$Level] -le $LogPriority[$LogLevel]) {
         Rotate-Log
         $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
         $Formatted = "$Timestamp [$Level] $Message"
         $Color = $LogColor[$Level]
         Write-Host $Formatted -ForegroundColor $Color
-
-        $LogPath = Join-Path $LogDir "$ScriptName`_current.txt"
-        Add-Content -Path $LogPath -Value $Formatted
+        Add-Content -Path $CurrentLog -Value $Formatted
     }
 }
 
-
-
-function Ensure-Elevation {
-    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
-    $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
-    if (-not $isAdmin) {
-        Write-Log -Message "Script not running as administrator. Relaunching with elevation..." -Level "WARN"
-
-        $psi = New-Object System.Diagnostics.ProcessStartInfo
-        $psi.FileName = "powershell.exe"
-        $psi.Arguments = "-ExecutionPolicy Bypass -File `"$PSCommandPath`""
-        $psi.Verb = "runas"
-        try {
-            [System.Diagnostics.Process]::Start($psi) | Out-Null
-            exit
-        } catch {
-            Write-Log -Message "User declined elevation. Script cannot continue." -Level "ERROR"
-            exit 1
-        }
-    } else {
-        Write-Log -Message "Script running with administrator privileges." -Level "INFO"
-    }
-}
-if (-not $SkipElevation) {
-    Ensure-Elevation
-}
-
-
-
-function Show-StartupPrompt {
-    Clear-Host
-    Write-Host "============================================================"
-    Write-Host "This script will perform the following tasks:" -ForegroundColor Cyan
-    Write-Host "- Check internet connectivity"
-    Write-Host "- Download and install selected applications via Ninite"
-    Write-Host ".net4.8.1, .netx8, .netx9, 7zip, aspnetx8, aspnetx9, chrome"
-    Write-Host "discord, keepass2, notepadplusplus, putty, steam, vcredist05"
-    Write-Host "vcredist08, vcredist10, vcredist12, vcredist13, vcredist15"
-    Write-Host "vcredistx05, vcredistx08, vcredistx10, vcredistx12, vcredistx13"
-    Write-Host "vcredistx15, vlc, winscp"
-    Write-Host "- Install DirectX runtime"
-    Write-Host "- Disable sleep and hibernation modes"
-    Write-Host "- Configure system for deployment"
-    Write-Host "============================================================"
-    Write-Host ""
-    Write-Host "Press any key to continue or [0] to exit..." -ForegroundColor Yellow
-
-    $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown").Character
-    if ($key -eq '0') {
-        Write-Host "Exiting script as requested." -ForegroundColor Red
+# ───── Admin & Internet Check ─────
+function Ensure-AdminRightsOnly {
+    if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        Write-Log "Script not running as administrator. Relaunching..." "WARN"
+        Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
         exit
     }
 }
-if (-not $SilentStart) {
-    Show-StartupPrompt
+
+# ───── Interactive Menu ─────
+function Show-InteractiveModuleSelector {
+    $options = @(
+        @{ Name = "Install Ninite"; Enabled = $true },
+        @{ Name = "Install DirectX"; Enabled = $true },
+        @{ Name = "Install AdGuard"; Enabled = $true },
+        @{ Name = "Install Foobar2000 + plugins"; Enabled = $true },
+        @{ Name = "Install Foobar2000 theme by author"; Enabled = $true },
+        @{ Name = "Install SyncTrayzor"; Enabled = $true },
+        @{ Name = "Configure Windows"; Enabled = $true }
+    )
+
+    $selectedIndex = 0
+
+    do {
+        Clear-Host
+        Write-Host "      Select modules to run:"
+        Write-Host "`nUse the up/down arrows to navigate`nTo select/deselect use SPACE or X`n         Select all - A`n        Deselect all - D`n    Install selected - ENTER`n         EXIT - ESC or 0`n"
+
+        for ($i = 0; $i -lt $options.Count; $i++) {
+            $prefix = if ($options[$i].Enabled) { "[X]" } else { "[ ]" }
+            $highlight = if ($i -eq $selectedIndex) { ">>" } else { "  " }
+            Write-Host "$highlight $prefix $($options[$i].Name)"
+        }
+
+        $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+
+        switch ($key.VirtualKeyCode) {
+            38 { if ($selectedIndex -gt 0) { $selectedIndex-- } }         # ↑ UP
+            40 { if ($selectedIndex -lt ($options.Count - 1)) { $selectedIndex++ } } # ↓ DOWN
+            32 { $options[$selectedIndex].Enabled = -not $options[$selectedIndex].Enabled } # SPACE
+            88 { $options[$selectedIndex].Enabled = -not $options[$selectedIndex].Enabled } # X
+            13 { return $options }                                        # ENTER
+            27 { Write-Log "User exited via ESC."; exit }                # ESC
+            48 { Write-Log "User exited via 0."; exit }                  # 0
+
+#27 {
+#    Write-Log "User exited via ESC." "INFO"
+#    if (Test-Path $InstallDir) {
+#        try {
+#            Remove-Item -Path $InstallDir -Recurse -Force
+#            Write-Log "INSTALLfiles directory removed after ESC." "DEBUG"
+#        } catch {
+#            Write-Log "Failed to remove INSTALLfiles: $_" "WARN"
+#        }
+#    }
+#    exit
+#}
+#48 {
+#    Write-Log "User exited via 0." "INFO"
+#    if (Test-Path $InstallDir) {
+#        try {
+#            Remove-Item -Path $InstallDir -Recurse -Force
+#            Write-Log "INSTALLfiles directory removed after 0." "DEBUG"
+#        } catch {
+#            Write-Log "Failed to remove INSTALLfiles: $_" "WARN"
+#        }
+#    }
+#    exit
+#}
+
+
+            default {
+                switch ($key.Character) {
+                    'A' { foreach ($opt in $options) { $opt.Enabled = $true } }
+                    'D' { foreach ($opt in $options) { $opt.Enabled = $false } }
+                }
+            }
+        }
+    } while ($true)
 }
 
-
-
-
-# Check internet connectivity with fallback to 8.8.8.8
 function Test-InternetConnection {
-    $TestUri = "https://www.microsoft.com"
+    $TestUri = "https://www.google.com"
     $FallbackHost = "8.8.8.8"
 
     try {
@@ -185,7 +176,8 @@ function Test-InternetConnection {
 
 function Install-NiniteBundle {
     $NiniteUrl = "https://ninite.com/.net4.8.1-.netx8-.netx9-7zip-aspnetx8-aspnetx9-chrome-discord-keepass2-notepadplusplus-putty-steam-vcredist05-vcredist08-vcredist10-vcredist12-vcredist13-vcredist15-vcredistx05-vcredistx08-vcredistx10-vcredistx12-vcredistx13-vcredistx15-vlc-winscp/ninite.exe"
-    $InstallerPath = Join-Path $env:TEMP "ninite_installer.exe"
+    #$InstallerPath = Join-Path $env:TEMP "ninite_installer.exe"
+    $InstallerPath = Join-Path $InstallDir "ninite_installer.exe"
 
     try {
         Write-Log -Message "Downloading Ninite installer..." -Level "INFO"
@@ -210,7 +202,7 @@ function Install-NiniteBundle {
 
 function Install-DirectX {
     $DirectXUrl = "https://download.microsoft.com/download/1/7/1/1718ccc4-6315-4d8e-9543-8e28a4e18c4c/dxwebsetup.exe"
-    $InstallerPath = Join-Path $env:TEMP "dxwebsetup.exe"
+    $InstallerPath = Join-Path $InstallDir "dxwebsetup.exe"
 
     try {
         Write-Log -Message "Downloading DirectX installer..." -Level "INFO"
@@ -218,70 +210,22 @@ function Install-DirectX {
         Write-Log -Message "Download completed: $InstallerPath" -Level "INFO"
     } catch {
         Write-Log -Message "Failed to download DirectX installer: $_" -Level "ERROR"
-        exit 1
+        return
     }
 
     try {
-        Write-Log -Message "Running DirectX installer silently..." -Level "INFO"
+        Write-Log -Message "Running DirectX installer..." -Level "INFO"
         Start-Process -FilePath $InstallerPath -ArgumentList "/Q" -Wait
         Write-Log -Message "DirectX installation completed." -Level "INFO"
     } catch {
         Write-Log -Message "Error during DirectX installation: $_" -Level "ERROR"
-        exit 1
-    }
-}
-
-function Disable-SleepMode {
-    try {
-        $activePlan = powercfg /getactivescheme
-        Write-Log -Message "Active power scheme: $activePlan" -Level "INFO"
-
-        Write-Log -Message "Disabling sleep timeout for AC and DC..." -Level "INFO"
-        powercfg /change standby-timeout-ac 0
-        powercfg /change standby-timeout-dc 0
-
-        Write-Log -Message "Sleep mode disabled successfully." -Level "INFO"
-    } catch {
-        Write-Log -Message "Failed to disable sleep mode: $_" -Level "ERROR"
-        exit 1
-    }
-}
-
-#function Disable-Hibernation {
-#    try {
-#        Write-Log -Message "Disabling system hibernation..." -Level "INFO"
-#        powercfg.exe /hibernate off
-#        Write-Log -Message "Hibernation disabled successfully." -Level "INFO"
-#    } catch {
-#        Write-Log -Message "Failed to disable hibernation: $_" -Level "ERROR"
-#        exit 1
-#    }
-#}
-function Disable-Hibernation {
-    try {
-        if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-            Write-Log -Message "Insufficient privileges: hibernation requires elevated rights." -Level "ERROR"
-            exit 1
-        }
-
-        Write-Log -Message "Disabling system hibernation..." -Level "INFO"
-        $process = Start-Process -FilePath "powercfg.exe" -ArgumentList "/hibernate off" -Wait -PassThru -WindowStyle Hidden
-
-        if ($process.ExitCode -eq 0) {
-            Write-Log -Message "Hibernation disabled successfully." -Level "INFO"
-        } else {
-            Write-Log -Message "powercfg exited with code $($process.ExitCode)" -Level "ERROR"
-            exit 1
-        }
-    } catch {
-        Write-Log -Message "Failed to disable hibernation: $_" -Level "ERROR"
-        exit 1
+        return
     }
 }
 
 function Install-AdGuard {
     $AdGuardUrl = "https://download.adguardcdn.com/d/18675/adguardInstaller.exe"
-    $InstallerPath = Join-Path $env:TEMP "adguardInstaller.exe"
+    $InstallerPath = Join-Path $InstallDir "adguardInstaller.exe"
 
     try {
         Write-Log -Message "Downloading AdGuard installer..." -Level "INFO"
@@ -289,7 +233,7 @@ function Install-AdGuard {
         Write-Log -Message "Download completed: $InstallerPath" -Level "INFO"
     } catch {
         Write-Log -Message "Failed to download AdGuard installer: $_" -Level "ERROR"
-        exit 1
+        return
     }
 
     try {
@@ -300,14 +244,13 @@ function Install-AdGuard {
         Write-Log -Message "AdGuard installation completed." -Level "INFO"
     } catch {
         Write-Log -Message "Error during AdGuard installation: $_" -Level "ERROR"
-        exit 1
+        return
     }
 }
 
-function Install-Foobar2000 {
-    #$FoobarUrl = "https://www.foobar2000.org/getfile/foobar2000_v2.25.1.exe"
+function Install-Foobar2000WithPlugins {
     $FoobarUrl = "https://www.foobar2000.org/files/foobar2000_v2.25.1.exe"
-    $InstallerPath = Join-Path $env:TEMP "foobar2000_installer.exe"
+    $InstallerPath = Join-Path $InstallDir "foobar2000_installer.exe"
 
     try {
         Write-Log -Message "Downloading Foobar2000 installer..." -Level "INFO"
@@ -315,7 +258,7 @@ function Install-Foobar2000 {
         Write-Log -Message "Download completed: $InstallerPath" -Level "INFO"
     } catch {
         Write-Log -Message "Failed to download Foobar2000 installer: $_" -Level "ERROR"
-        exit 1
+        return
     }
 
     try {
@@ -324,11 +267,15 @@ function Install-Foobar2000 {
         Write-Log -Message "Foobar2000 installation completed." -Level "INFO"
     } catch {
         Write-Log -Message "Error during Foobar2000 installation: $_" -Level "ERROR"
-        exit 1
+        return
     }
-}
 
-function Install-FoobarPlugins {
+    $FoobarComponentDir = "$env:ProgramFiles (x86)\foobar2000\components"
+    if (-not (Test-Path $FoobarComponentDir)) {
+        Write-Log -Message "Foobar2000 not found at expected path: $FoobarComponentDir" -Level "ERROR"
+        return
+    }
+
     $PluginUrls = @(
         "https://www.foobar2000.org/getcomponent/98881927bed68c4073b776720dcf9ec6/foo_beefweb-0.7.fb2k-component",
         "https://www.foobar2000.org/getcomponent/ed22ac55275a5ab35faebb16e7b172aa/foo_openlyrics-v1.6.fb2k-component",
@@ -337,15 +284,9 @@ function Install-FoobarPlugins {
         "https://www.foobar2000.org/getcomponent/8febb9df1bbeabf041f1965e6fbb6e96/foo_dsp_xgeq.zip"
     )
 
-    $FoobarComponentDir = "$env:ProgramFiles (x86)\foobar2000\components"
-    if (-not (Test-Path $FoobarComponentDir)) {
-        Write-Log -Message "Foobar2000 not found at expected path: $FoobarComponentDir" -Level "ERROR"
-        exit 1
-    }
-
     foreach ($url in $PluginUrls) {
         $fileName = Split-Path $url -Leaf
-        $tempPath = Join-Path $env:TEMP $fileName
+        $tempPath = Join-Path $InstallDir $fileName
 
         try {
             Write-Log -Message "Downloading plugin: $fileName" -Level "INFO"
@@ -356,7 +297,7 @@ function Install-FoobarPlugins {
         }
 
         if ($fileName -like "*.zip") {
-            $extractPath = Join-Path $env:TEMP "foobar_plugin_extract"
+            $extractPath = Join-Path $InstallDir "foobar_plugin_extract"
             if (Test-Path $extractPath) { Remove-Item $extractPath -Recurse -Force }
             New-Item -Path $extractPath -ItemType Directory | Out-Null
 
@@ -380,185 +321,300 @@ function Install-FoobarPlugins {
             }
         }
     }
+
+
+
+
+    # Download and install user-components from GitHub
+$UserComponentsZipUrl = "https://github.com/obeliksgall/AfterInstall/archive/refs/heads/main.zip"
+$ZipPath = Join-Path $InstallDir "foobar_user_components.zip"
+$ExtractRoot = Join-Path $InstallDir "foobar_user_components_extract"
+$TargetUserComponents = Join-Path $env:APPDATA "foobar2000-v2\user-components"
+
+try {
+    Write-Log -Message "Downloading user-components archive from GitHub..." -Level "INFO"
+    Invoke-WebRequest -Uri $UserComponentsZipUrl -OutFile $ZipPath -UseBasicParsing -TimeoutSec 60
+    Write-Log -Message "Download completed: $ZipPath" -Level "INFO"
+} catch {
+    Write-Log -Message "Failed to download user-components archive: $_" -Level "ERROR"
+    return
+}
+
+try {
+    if (Test-Path $ExtractRoot) { Remove-Item $ExtractRoot -Recurse -Force }
+    Expand-Archive -Path $ZipPath -DestinationPath $ExtractRoot -Force
+    Write-Log -Message "Archive extracted to: $ExtractRoot" -Level "INFO"
+
+    $SourceUserComponents = Join-Path $ExtractRoot "AfterInstall-main\foobar2000\user-components"
+    if (-not (Test-Path $SourceUserComponents)) {
+        Write-Log -Message "Source user-components directory not found: $SourceUserComponents" -Level "ERROR"
+        return
+    }
+
+    if (-not (Test-Path $TargetUserComponents)) {
+        Write-Log -Message "Creating target user-components directory: $TargetUserComponents" -Level "INFO"
+        New-Item -Path $TargetUserComponents -ItemType Directory | Out-Null
+    }
+
+    Copy-Item -Path "$SourceUserComponents\*" -Destination $TargetUserComponents -Recurse -Force
+    Write-Log -Message "User-components installed to: $TargetUserComponents" -Level "INFO"
+} catch {
+    Write-Log -Message "Failed to extract or copy user-components: $_" -Level "ERROR"
+}
+
+
+
 }
 
 function Install-FoobarThemeFromGitHub {
-    $ThemeUrl = "https://github.com/obeliksgall/AfterInstall/raw/refs/heads/main/foobar2000/foobar2000theme_last.fth"
-    $ThemeFileName = "foobar2000theme_last.fth"
-    $FoobarThemeDir = Join-Path $env:APPDATA "foobar2000\themes"
-
-    if (-not (Test-Path $FoobarThemeDir)) {
-        Write-Log -Message "Creating theme directory: $FoobarThemeDir" -Level "INFO"
-        New-Item -Path $FoobarThemeDir -ItemType Directory | Out-Null
-    }
-
-    $DestinationPath = Join-Path $FoobarThemeDir $ThemeFileName
+    $ThemeUrl       = "https://github.com/obeliksgall/AfterInstall/raw/refs/heads/main/foobar2000/foobar2000theme_last.fth"
+    $ThemeFileName  = "foobar2000theme_last.fth"
+    $DownloadedPath = Join-Path $InstallDir $ThemeFileName
+    $TargetPath     = "$env:APPDATA\foobar2000-v2\theme.fth"
 
     try {
-        Write-Log -Message "Downloading theme from GitHub..." -Level "INFO"
-        Invoke-WebRequest -Uri $ThemeUrl -OutFile $DestinationPath -UseBasicParsing -TimeoutSec 30
-        Write-Log -Message "Theme downloaded to: $DestinationPath" -Level "INFO"
+        Write-Log -Message "Downloading Foobar2000 theme from GitHub..." -Level "INFO"
+        Invoke-WebRequest -Uri $ThemeUrl -OutFile $DownloadedPath -UseBasicParsing -TimeoutSec 30
+        Write-Log -Message "Theme downloaded to: $DownloadedPath" -Level "INFO"
     } catch {
         Write-Log -Message "Failed to download theme: $_" -Level "ERROR"
-        exit 1
-    }
-}
-
-function Restore-FoobarPlaybackStats {
-    $LocalFile = Join-Path $PSScriptRoot "foobar2000PlaybackStatistics.xml"
-    $TargetPath = Join-Path $env:APPDATA "foobar2000\PlaybackStatistics.xml"
-
-    if (-not (Test-Path $LocalFile)) {
-        Write-Log -Message "Playback statistics file not found: $LocalFile" -Level "ERROR"
-        exit 1
+        return
     }
 
     try {
-        Write-Log -Message "Restoring playback statistics from local file..." -Level "INFO"
-        Copy-Item -Path $LocalFile -Destination $TargetPath -Force
-        Write-Log -Message "Playback statistics restored successfully to $TargetPath" -Level "INFO"
-    } catch {
-        Write-Log -Message "Failed to restore playback statistics: $_" -Level "ERROR"
-        exit 1
-    }
-}
-
-function Install-MSIAfterburner {
-    $ZipUrl = "https://download.msi.com/uti_exe/vga/MSIAfterburnerSetup.zip"
-    $TempZip = Join-Path $env:TEMP "MSIAfterburner.zip"
-    $ExtractPath = Join-Path $env:TEMP "MSIAfterburnerExtract"
-
-    try {
-        Write-Log -Message "Downloading MSI Afterburner installer..." -Level "INFO"
-        Invoke-WebRequest -Uri $ZipUrl -OutFile $TempZip -UseBasicParsing -TimeoutSec 60
-
-        if (Test-Path $ExtractPath) { Remove-Item $ExtractPath -Recurse -Force }
-        New-Item -Path $ExtractPath -ItemType Directory | Out-Null
-
-        Expand-Archive -Path $TempZip -DestinationPath $ExtractPath -Force
-
-        $SetupExe = Get-ChildItem -Path $ExtractPath -Filter "MSIAfterburnerSetup.exe" -Recurse | Select-Object -First 1
-        if (-not $SetupExe) {
-            Write-Log -Message "Installer not found in archive." -Level "ERROR"
-            exit 1
+        if (-not (Test-Path (Split-Path $TargetPath))) {
+            Write-Log -Message "Creating target theme directory: $(Split-Path $TargetPath)" -Level "INFO"
+            New-Item -Path (Split-Path $TargetPath) -ItemType Directory | Out-Null
         }
 
-        Write-Log -Message "Running MSI Afterburner installer..." -Level "INFO"
-        Start-Process -FilePath $SetupExe.FullName -ArgumentList "/S" -Wait
-        Write-Log -Message "MSI Afterburner installation completed." -Level "INFO"
+        Copy-Item -Path $DownloadedPath -Destination $TargetPath -Force
+        Write-Log -Message "Theme installed to: $TargetPath" -Level "INFO"
     } catch {
-        Write-Log -Message "Failed to install MSI Afterburner: $_" -Level "ERROR"
-        exit 1
-    }
-}
-function Install-AfterburnerOverlay {
-    $OverlayUrl = "https://github.com/obeliksgall/AfterInstall/raw/refs/heads/main/MSIAfterburnerOverlay/MyOverlay.ovl"
-    $OverlayName = "MyOverlay.ovl"
-    $TargetDir = "$env:ProgramFiles(x86)\RivaTuner Statistics Server\Profiles"
-    $TargetPath = Join-Path $TargetDir $OverlayName
-
-    if (-not (Test-Path $TargetDir)) {
-        Write-Log -Message "Overlay target folder not found: $TargetDir" -Level "ERROR"
-        exit 1
-    }
-
-    try {
-        Write-Log -Message "Downloading overlay from GitHub..." -Level "INFO"
-        Invoke-WebRequest -Uri $OverlayUrl -OutFile $TargetPath -UseBasicParsing -TimeoutSec 30
-        Write-Log -Message "Overlay installed to: $TargetPath" -Level "INFO"
-    } catch {
-        Write-Log -Message "Failed to install overlay: $_" -Level "ERROR"
-        exit 1
+        Write-Log -Message "Failed to copy theme to target location: $_" -Level "ERROR"
     }
 }
 
 function Install-SyncTrayzor {
-    $InstallerUrl = "https://github.com/canton7/SyncTrayzor/releases/download/v1.1.29/SyncTrayzorSetup-x64.exe"
-    $InstallerPath = Join-Path $env:TEMP "SyncTrayzorSetup-x64.exe"
+    $InstallerUrl  = "https://github.com/canton7/SyncTrayzor/releases/download/v1.1.29/SyncTrayzorSetup-x64.exe"
+    $InstallerPath = Join-Path $InstallDir "SyncTrayzorSetup-x64.exe"
 
     try {
         Write-Log -Message "Downloading SyncTrayzor installer..." -Level "INFO"
         Invoke-WebRequest -Uri $InstallerUrl -OutFile $InstallerPath -UseBasicParsing -TimeoutSec 60
+        Write-Log -Message "Download completed: $InstallerPath" -Level "INFO"
+    } catch {
+        Write-Log -Message "Failed to download SyncTrayzor installer: $_" -Level "ERROR"
+        return
+    }
 
-        Write-Log -Message "Running SyncTrayzor installer silently..." -Level "INFO"
+    try {
+        Write-Log -Message "Running SyncTrayzor installer..." -Level "INFO"
         Start-Process -FilePath $InstallerPath -ArgumentList "/SILENT" -Wait
         Write-Log -Message "SyncTrayzor installation completed." -Level "INFO"
     } catch {
-        Write-Log -Message "Failed to install SyncTrayzor: $_" -Level "ERROR"
-        exit 1
+        Write-Log -Message "Error during SyncTrayzor installation: $_" -Level "ERROR"
+        return
     }
 }
-function Install-StreamDeck {
-    $InstallerUrl = "https://edge.elgato.com/egc/windows/sd/Stream_Deck_7.0.1.22055.msi"
-    $InstallerPath = Join-Path $env:TEMP "StreamDeckSetup.exe"
 
+function Disable-SleepMode {
     try {
-        Write-Log -Message "Downloading Elgato Stream Deck installer..." -Level "INFO"
-        Invoke-WebRequest -Uri $InstallerUrl -OutFile $InstallerPath -UseBasicParsing -TimeoutSec 60
+        $activePlan = powercfg /getactivescheme
+        Write-Log -Message "Active power scheme: $activePlan" -Level "INFO"
 
-        Write-Log -Message "Running Stream Deck installer silently..." -Level "INFO"
-        Start-Process -FilePath $InstallerPath -ArgumentList "/S" -Wait
-        Write-Log -Message "Stream Deck installation completed." -Level "INFO"
+        Write-Log -Message "Disabling sleep timeout for AC and DC..." -Level "INFO"
+        powercfg /change standby-timeout-ac 0
+        powercfg /change standby-timeout-dc 0
+
+        Write-Log -Message "Sleep mode disabled successfully." -Level "INFO"
     } catch {
-        Write-Log -Message "Failed to install Stream Deck: $_" -Level "ERROR"
-        exit 1
+        Write-Log -Message "Failed to disable sleep mode: $_" -Level "ERROR"
     }
 }
 
+function Disable-Hibernation {
+    try {
+        if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+            Write-Log -Message "Insufficient privileges: hibernation requires elevated rights." -Level "ERROR"
+            return
+        }
 
+        Write-Log -Message "Disabling system hibernation..." -Level "INFO"
+        $process = Start-Process -FilePath "powercfg.exe" -ArgumentList "/hibernate off" -Wait -PassThru -WindowStyle Hidden
 
-# Abort script if no internet connection
-if (-not (Test-InternetConnection)) {
-    Write-Log -Message "No internet connection detected terminating script." -Level "ERROR"
-    exit 1
+        if ($process.ExitCode -eq 0) {
+            Write-Log -Message "Hibernation disabled successfully." -Level "INFO"
+        } else {
+            Write-Log -Message "powercfg exited with code $($process.ExitCode)" -Level "ERROR"
+        }
+    } catch {
+        Write-Log -Message "Failed to disable hibernation: $_" -Level "ERROR"
+    }
 }
 
-# Proceed with installation
-if (-not $SkipNinite) {
-    Install-NiniteBundle
-}
+function Set-PowerActionsToDoNothing {
+    try {
+        $schemeGuid = (powercfg /getactivescheme) -replace '.*GUID: ([a-f0-9\-]+).*', '$1'
+        Write-Log -Message "Active power scheme GUID: $schemeGuid" -Level "INFO"
 
-if (-not $SkipDirectX) {
-    Install-DirectX
-}
+        $subgroup = "4f971e89-eebd-4455-a8de-9e59040e7347"  # Power buttons and lid
 
-if (-not $SkipPowerConfig) {
+        $settings = @{
+            "Power button action"     = "7648efa3-dd9c-4e3e-b566-50f929386280"
+            "Sleep button action"     = "96996bc0-ad50-47ec-923b-6f41874dd9eb"
+            "Lid close action"        = "5ca83367-6e45-459f-a27b-476b1d01c936"
+        }
+
+        foreach ($name in $settings.Keys) {
+            $settingGuid = $settings[$name]
+            Write-Log -Message "Setting '$name' to 'Do nothing'..." -Level "INFO"
+
+            powercfg /setacvalueindex $schemeGuid $subgroup $settingGuid 0
+            powercfg /setdcvalueindex $schemeGuid $subgroup $settingGuid 0
+        }
+
+        powercfg /S $schemeGuid
+        Write-Log -Message "All power actions set to 'Do nothing'." -Level "INFO"
+    } catch {
+        Write-Log -Message "Failed to configure power actions: $_" -Level "ERROR"
+    }
+}
+#function Set-PowerActionsToDoNothing {
+#    try {
+#        $schemeGuid = (powercfg /getactivescheme) -replace '.*GUID: ([a-f0-9\-]+).*', '$1'
+#        Write-Log -Message "Active power scheme GUID: $schemeGuid" -Level "INFO"
+#
+#        $subgroup = "4f971e89-eebd-4455-a8de-9e59040e7347"  # Power buttons and lid
+#
+#        # Wykryj typ obudowy
+#        $chassisTypes = (Get-CimInstance Win32_SystemEnclosure).ChassisTypes
+#        $isLaptop = $chassisTypes -contains 8 -or $chassisTypes -contains 9 -or $chassisTypes -contains 10 -or $chassisTypes -contains 14
+#
+#        if ($isLaptop) {
+#            Write-Log -Message "Device type: Laptop" -Level "INFO"
+#        } else {
+#            Write-Log -Message "Device type: Desktop or other" -Level "INFO"
+#        }
+#
+#        $settings = @{}
+#
+#        $settings["Power button action"] = "7648efa3-dd9c-4e3e-b566-50f929386280"
+#        $settings["Sleep button action"] = "96996bc0-ad50-47ec-923b-6f41874dd9eb"
+#
+#        if ($isLaptop) {
+#            $settings["Lid close action"] = "5ca83367-6e45-459f-a27b-476b1d01c936"
+#        }
+#
+#        foreach ($name in $settings.Keys) {
+#            $settingGuid = $settings[$name]
+#            Write-Log -Message "Setting '$name' to 'Do nothing'..." -Level "INFO"
+#
+#            powercfg /setacvalueindex $schemeGuid $subgroup $settingGuid 0
+#            powercfg /setdcvalueindex $schemeGuid $subgroup $settingGuid 0
+#        }
+#
+#        powercfg /S $schemeGuid
+#        Write-Log -Message "All applicable power actions set to 'Do nothing'." -Level "INFO"
+#    } catch {
+#        Write-Log -Message "Failed to configure power actions: $_" -Level "ERROR"
+#    }
+#}
+
+
+function Configure-WindowsSettings {
     Disable-SleepMode
     Disable-Hibernation
+    Set-PowerActionsToDoNothing
+
+    try {
+        $osVersion = (Get-CimInstance Win32_OperatingSystem).Caption
+        Write-Log -Message "Detected OS: $osVersion" -Level "INFO"
+
+        if ($osVersion -match "Windows 11") {
+            Write-Log -Message "Applying Windows 11 registry tweak..." -Level "INFO"
+
+            $regCommand = 'reg.exe add "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" /f /ve'
+            $regProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c $regCommand" -Wait -PassThru -WindowStyle Hidden
+
+            if ($regProcess.ExitCode -eq 0) {
+                Write-Log -Message "Registry tweak applied successfully." -Level "INFO"
+            } else {
+                Write-Log -Message "Registry command failed with exit code $($regProcess.ExitCode)" -Level "ERROR"
+            }
+
+            Write-Log -Message "Restarting explorer.exe..." -Level "INFO"
+            Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+            Start-Process -FilePath "explorer.exe"
+            Write-Log -Message "explorer.exe restarted." -Level "INFO"
+        }
+    } catch {
+        Write-Log -Message "Failed to apply Windows 11 tweak: $_" -Level "ERROR"
+    }
 }
 
-if (-not $SkipAdguard) {
-    Install-AdGuard
+# ───── Dispatcher ─────
+function Run-SelectedModules($selectedModules) {
+    foreach ($module in $selectedModules) {
+        if (-not $module.Enabled) { continue }
+        Write-Log "Executing: $($module.Name)" "INFO"
+
+        switch ($module.Name) {
+            "Install Ninite"       { Install-NiniteBundle }
+            "Install DirectX"      { Install-DirectX }
+            "Install AdGuard"      { Install-AdGuard }
+            "Install Foobar2000 + plugins" { Install-Foobar2000WithPlugins }
+            "Install Foobar2000 theme by author" { Install-FoobarThemeFromGitHub }
+            "Install SyncTrayzor" { Install-SyncTrayzor }
+            "Configure Windows" { Configure-WindowsSettings }
+            default {
+                Write-Log "No implementation for: $($module.Name)" "WARN"
+                Start-Sleep -Milliseconds 500
+            }
+        }
+    }
 }
 
-if (-not $SkipFoobar2000) {
-    Install-Foobar2000
+# ───── Main ─────
+Ensure-AdminRightsOnly
+$selected = Show-InteractiveModuleSelector
+
+if (-not (Test-InternetConnection)) {
+    Write-Log "No internet connection detected. Terminating script." "ERROR"
+    Write-Host "`nNo internet connection. Press any key to exit..." -ForegroundColor Red
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit
 }
 
-if (-not $SkipFoobar2000Plugin) {
-    Install-FoobarPlugins
-}
+Run-SelectedModules $selected
 
-if (-not $SkipFoobarThemeFromGitHub) {
-    Install-FoobarThemeFromGitHub
-}
+Write-Log "Script completed." "INFO"
 
-if (-not $SkipFoobarPlaybackStats) {
-    Restore-FoobarPlaybackStats
-}
-
-Install-MSIAfterburner
-Install-AfterburnerOverlay
-
-Install-SyncTrayzor
-Install-StreamDeck
-
-
-# Main script logic
-#for ($i = 1; $i -le 5; $i++) {
-#    Write-Log -Message "This is INFO log number $i" -Level "INFO"
-#    Write-Log -Message "This is WARN log number $i" -Level "WARN"
-#    Write-Log -Message "This is ERROR log number $i" -Level "ERROR"
-#    Write-Log -Message "This is DEBUG log number $i" -Level "DEBUG"
-#    Start-Sleep -Seconds 5
+#Write-Host "`n`nNow the INSTALLfiles directory will be deleted...`nPress any key to continue..." -ForegroundColor DarkGray
+#$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+#if (Test-Path $InstallDir) {
+#    try {
+#        Remove-Item -Path $InstallDir -Recurse -Force
+#        Write-Log "INSTALLfiles directory removed after completion." "DEBUG"
+#    } catch {
+#        Write-Log "Failed to remove INSTALLfiles: $_" "WARN"
+#    }
 #}
+if (Test-Path $InstallDir) {
+    Write-Host "`nDo you want to delete the INSTALLfiles directory? [Y/N]" -ForegroundColor Yellow
+    $response = Read-Host "Type Y or YES to confirm"
+
+    if ($response -match '^(Y|YES)$') {
+        try {
+            Remove-Item -Path $InstallDir -Recurse -Force
+            Write-Log "INSTALLfiles directory removed after user confirmation." "DEBUG"
+        } catch {
+            Write-Log "Failed to remove INSTALLfiles: $_" "WARN"
+        }
+    } else {
+        Write-Log "INSTALLfiles directory preserved by user choice." "INFO"
+    }
+}
+
+Write-Host "`n`nPress any key to exit..." -ForegroundColor DarkGray
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+exit
