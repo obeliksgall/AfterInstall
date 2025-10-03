@@ -6,11 +6,10 @@ Run in powershell:
 ```
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\AfterInstall.ps1
-
+```
 OR
-
+```
 powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest 'https://raw.githubusercontent.com/obeliksgall/AfterInstall/refs/heads/main/AfterInstall.ps1' -OutFile \"$env:USERPROFILE\Downloads\AfterInstall.ps1\"; powershell -ExecutionPolicy Bypass -File \"$env:USERPROFILE\Downloads\AfterInstall.ps1\""
-
 ```
 
 ---
