@@ -6,10 +6,6 @@ Run in powershell:
 ```
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\AfterInstall.ps1
-
-OR
-
-irm "https://raw.githubusercontent.com/obeliksgall/AfterInstall/refs/heads/main/AfterInstall.ps1" | iex
 ```
 
 ---
