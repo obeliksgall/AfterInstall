@@ -9,7 +9,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 OR
 ```
-powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest 'https://raw.githubusercontent.com/obeliksgall/AfterInstall/refs/heads/main/AfterInstall.ps1' -OutFile \"$env:USERPROFILE\Downloads\AfterInstall.ps1\"; powershell -ExecutionPolicy Bypass -File \"$env:USERPROFILE\Downloads\AfterInstall.ps1\""
+powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest 'https://raw.githubusercontent.com/obeliksgall/AfterInstall/main/AfterInstall.ps1' -OutFile \"$env:USERPROFILE\Downloads\AfterInstall.ps1\"; powershell -ExecutionPolicy Bypass -File \"$env:USERPROFILE\Downloads\AfterInstall.ps1\""
 ```
 
 ---
