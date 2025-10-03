@@ -2,14 +2,14 @@
 
 **AfterInstall.ps1** is a modular, interactive PowerShell script designed to automate post-installation setup on Windows systems. It provides a user-friendly menu for installing essential software, configuring system settings, and applying customizations — all with robust logging, error handling, and traceability.
 
-Run in powershell:
+If you have downloaded the file
 ```
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\AfterInstall.ps1
 ```
-OR
+OR run from PowerShell:
 ```
-powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest 'https://raw.githubusercontent.com/obeliksgall/AfterInstall/main/AfterInstall.ps1' -OutFile \"$env:USERPROFILE\Downloads\AfterInstall.ps1\"; powershell -ExecutionPolicy Bypass -File \"$env:USERPROFILE\Downloads\AfterInstall.ps1\""
+Invoke-WebRequest 'https://raw.githubusercontent.com/obeliksgall/AfterInstall/main/AfterInstall.ps1' -OutFile "$env:USERPROFILE\Downloads\AfterInstall.ps1"; powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\AfterInstall.ps1"
 ```
 
 ---
